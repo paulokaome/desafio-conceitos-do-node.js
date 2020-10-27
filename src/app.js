@@ -1,76 +1,91 @@
-
+const express = require("express");
 const cors = require("cors");
-const express = require('express')
-const { uuid, isUuid } = require('uuidv4');
+const { v4: uuid, validate: isUuid } = require('uuid');
 
 const app = express();
 
 app.use(express.json());
 app.use(cors());
 
-const users = [];
+const repositories = [];
 
-function CheckId(request, response, next) {
-  const { id } = request.params
 
-  if (!isUuid(id)) {
-    return response.status(401).json({ message: 'Need a validated ID' })
-  }
- 
-  next()
-}
+app.get("/repositories", (request, response) => {
 
-app.get('/users', (request, response) => {
-  const { name } = request.query
-
-  const findName = name ? users.filter(user => user.name.includes(name)) : users;
-
-  return response.json(findName)
+  return response.json(repositories)
 
 });
 
-app.post('/users', (request, response) => {
-  const { name, email } = request.body
+app.post("/repositories", (request, response) => {
+  const { title, url, techs } = request.body;
 
-  const user = { id: uuid(), name, email }
+  const user = { id: uuid(), title, url, techs, likes: 0 };
 
-  users.push(user)
+  repositories.push(user);
 
-  return response.json(user)
+  response.status(200).json(user);
 
-})
+});
 
-app.put('/users/:id', CheckId, (request, response) => {
-  const { id } = request.params
-  const { name, email } = request.body
+app.put("/repositories/:id", (request, response) => {
+  const { id } = request.params;
+  const { title, url, techs } = request.body;
 
-  const usersIndex = users.findIndex(user => user.id === id);
+  const repositoriesIndex = repositories.findIndex(repositorie => repositorie.id === id);
 
-  const user = {
-    id,
-    name,
-    email
+  if (!isUuid(id)) {
+    return response.status(400).json({ message: "Id not Found" })
   }
 
-  users[usersIndex] = user
+  const Changes = {
+    id,
+    title,
+    url,
+    techs,
+    likes: repositories[repositoriesIndex].likes
+  };
 
-  return response.status(200).json(user);
-})
+  repositories[repositoriesIndex] = Changes;
 
-app.delete('/users/:id', CheckId, (request, response) => {
-  const { id } = request.params
-
-  const usersIndex = users.findIndex(user => user.id === id);
-
-  users.splice(usersIndex, 1)
-
-  return response.status(200).json()
-})
+  response.json(Changes)
 
 
+});
 
-app.listen(3333, () => {
-  console.log("Server Worker 🚀🚀🚀");
-})
+app.delete("/repositories/:id", (request, response) => {
+  const { id } = request.params;
+
+  const repositoriesIndex = repositories.findIndex(repositorie => repositorie.id === id);
+
+  if (!isUuid(id)) {
+    return response.status(400).json({ message: "Id not Found" })
+  }
+
+  repositories.splice(repositoriesIndex, 1)
+
+  return response.status(204).json()
+});
+
+app.post("/repositories/:id/like", (request, response) => {
+  const { id } = request.params;
+  const repositoriesIndex = repositories.findIndex(repositorie => repositorie.id === id);
+
+  if (!isUuid(id)) {
+    return response.status(400).json({ message: "Id not Found" })
+  }
+
+  const AddLike = {
+    id,
+    title: repositories[repositoriesIndex].title,
+    url: repositories[repositoriesIndex].url,
+    techs: repositories[repositoriesIndex].techs,
+    likes: repositories[repositoriesIndex].likes + 1
+  };
+
+  repositories[repositoriesIndex] = AddLike;
+
+  response.json(AddLike)
+
+});
 
 module.exports = app;
